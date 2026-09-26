@@ -45,8 +45,15 @@ async def check_virality(mint: str, initial_mcap_sol: float, sol_price: float) -
     await asyncio.sleep(MIN_BACKOFF_S)
     base = _get_token_metrics(mint)
     if base is None or base["mcap"] <= 0:
-        return {"ok": False, "detail": "non listato su Dexscreener dopo attesa",
-                "mcap_now": initial_mcap_usd}
+        # Non ancora listato su Dexscreener dopo la prima attesa: NON scartare
+        # subito (fake-negative: Dexscreener è solo lento a indicizzare i fresh).
+        # Riprova una seconda volta dopo ALTRO attesa prima di rinunciare.
+        await asyncio.sleep(window)
+        base = _get_token_metrics(mint)
+        if base is None or base["mcap"] <= 0:
+            return {"ok": False,
+                    "detail": "non listato su Dexscreener anche dopo 2 attese",
+                    "mcap_now": initial_mcap_usd}
 
     await asyncio.sleep(window)
     now = _get_token_metrics(mint)
