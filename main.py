@@ -165,6 +165,14 @@ async def process_new_token(ev: dict):
 
 
 async def main():
+    # KILL-SWITCH: se ZENO_ENABLED non è "true", il bot esce subito e
+    # NON si connette né manda alert. Usarlo per stoppare da Railway senza
+    # toccare la dashboard. (Railway riavvia il container ma il processo
+    # termina comunque -> nessun WS, nessun alert.)
+    if os.getenv("ZENO_ENABLED", "").strip().lower() != "true":
+        print(f"[{datetime.now()}] 🛑 ZENO DISABILITATO (ZENO_ENABLED != true). Esco senza connettermi.")
+        return
+
     print(f"[{datetime.now()}] 🚀 ZENO Sniper avviato — chat {Config.TELEGRAM_CHAT_ID}")
     print(f"[{datetime.now()}] Filtri: liq>${Config.MIN_LIQUIDITY_USD:.0f} "
           f"mcap<${Config.MAX_MARKET_CAP_USD:.0f} + anti-rug on-chain")
