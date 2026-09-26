@@ -31,6 +31,15 @@ class Config:
     # Es. "2" = solo token con un buy iniziale >=2 SOL (più forti, meno spam).
     MIN_INITIAL_BUY_SOL = float(os.getenv("MIN_INITIAL_BUY_SOL", "0"))
 
+    # --- Piano A: virality check on-chain ---
+    # Se TRUE, Zeno aspetta ~VIRALITY_WINDOW_S e verifica che il mcap stia
+    # crescendo (trazione reale) prima di alertare. Scarta i pump finti.
+    VIRALITY_ENABLED = os.getenv("VIRALITY_ENABLED", "").strip().lower() not in (
+        "false", "0", "no", "off"
+    )  # default TRUE
+    VIRALITY_WINDOW_S = int(os.getenv("VIRALITY_WINDOW_S", "45"))
+    VIRALITY_MIN_GROWTH = float(os.getenv("VIRALITY_MIN_GROWTH", "0.30"))
+
     # --- Rate-limit invio ---
     RATE_LIMIT_SEC = float(os.getenv("RATE_LIMIT_SEC", "1.6"))
 

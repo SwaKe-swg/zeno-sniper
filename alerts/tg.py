@@ -30,6 +30,7 @@ async def send_pump_alert(
     initial_buy_sol: float,
     sol_traded: float,
     sol_price: float,
+    virality_note: str = "",
 ):
     """Invia la call di un nuovo token (stile bro, compatto per mobile)."""
     header = f"🎯 *{symbol}* — {coin_name}"
@@ -45,11 +46,13 @@ async def send_pump_alert(
         f"⚡ [Axiom]({_link_axiom(mint)})\n"
         f"`{mint}`\n"
     )
+    virality_line = f"\n{virality_note}\n" if virality_note else "\n"
     footer = "_Wild west bro. DYOR prima di qualsiasi centesimo._"
     message = (
         f"{header}\n\n"
         f"{stats}\n"
-        f"🛡️ *Anti-rug pass:* mint + freeze rinunciate\n\n"
+        f"🛡️ *Anti-rug pass:* mint + freeze rinunciate\n"
+        f"{virality_line}"
         f"{links}\n"
         f"{footer}"
     )

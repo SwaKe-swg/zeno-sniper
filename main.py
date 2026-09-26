@@ -16,6 +16,7 @@ from config import Config
 from dex.ws_client import PumpPortalWSClient
 from alerts.tg import send_pump_alert
 from rug import check_rug
+from virality import check_virality
 
 # Session HTTP condivisa con pool adeguato (evita "pool occupied" sotto carico)
 HTTP = requests.Session()
@@ -115,11 +116,24 @@ async def _verify_and_alert(ev: dict):
                   f"(solo {sol_spent:.2f} SOL < {Config.MIN_INITIAL_BUY_SOL})")
             return
 
-        # segna come alertato PRIMA del send (anti-duplicati/anti-flood)
-        alerted_mints.add(mint)
-
         sol_price = get_sol_usd()
         mcap_sol = ev.get("marketCapSol") or 0
+
+        # Piano A — virality check: verifica che il token abbia trazione
+        # reale (mcap in crescita) prima di alertare. Scarta i pump finti.
+        virality_note = ""
+        growth = None
+        if Config.VIRALITY_ENABLED:
+            v = await check_virality(mint, mcap_sol, sol_price)
+            growth = v.get("growth")
+            if not v["ok"]:
+                print(f"[{datetime.now()}] 🚫 SCARTATO non-virale {ev.get('symbol')} "
+                      f"-> {v['detail'][:80]}")
+                return
+            virality_note = f"📈 {v['detail']}"
+
+        # segna come alertato PRIMA del send (anti-duplicati/anti-flood)
+        alerted_mints.add(mint)
 
         # send sotto lock: il rate-limit copre anche l'invio effettivo
         global _last_send
@@ -141,8 +155,10 @@ async def _verify_and_alert(ev: dict):
                 ev.get("initialBuy") or 0,                # initial buy SOL
                 ev.get("solAmount") or 0,                 # SOL traded
                 sol_price,
+                virality_note=virality_note,
             )
-        print(f"[{datetime.now()}] ✅ ALERT ZENO → {ev.get('symbol')} ${mcap_sol:.1f} SOL mcap")
+        print(f"[{datetime.now()}] ✅ ALERT ZENO → {ev.get('symbol')} ${mcap_sol:.1f} SOL mcap" 
+              + (f" [{growth*100:+.0f}%]" if growth is not None else ""))
     except Exception as e:
         print(f"[{datetime.now()}] errore in verifica/alert {ev.get('symbol')}: {e}\n"
               f"{traceback.format_exc()}")
