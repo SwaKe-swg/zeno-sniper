@@ -37,7 +37,7 @@ class Config:
     VIRALITY_ENABLED = os.getenv("VIRALITY_ENABLED", "").strip().lower() not in (
         "false", "0", "no", "off"
     )  # default TRUE
-    VIRALITY_WINDOW_S = int(os.getenv("VIRALITY_WINDOW_S", "45"))
+    VIRALITY_WINDOW_S = int(os.getenv("VIRALITY_WINDOW_S", "25"))
     VIRALITY_MIN_GROWTH = float(os.getenv("VIRALITY_MIN_GROWTH", "0.30"))
 
     # --- Rate-limit invio ---
@@ -46,7 +46,7 @@ class Config:
     # --- Follow-up colore (verde/rosso) ---
     # Dopo STATUS_WINDOW_S secondi dall'alert arancione, Zeno ricontrolla il
     # mcap e aggiorna il messaggio: verde se sale, rosso se scende (rug).
-    STATUS_WINDOW_S = int(os.getenv("STATUS_WINDOW_S", "90"))
+    STATUS_WINDOW_S = int(os.getenv("STATUS_WINDOW_S", "60"))
 
     # --- Riferimenti runtime (settati in main) ---
     BOT = None
