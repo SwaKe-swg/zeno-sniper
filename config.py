@@ -8,9 +8,10 @@ class Config:
     TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
     # --- Kill-switch (Railway) ---
-    # Si attiva con true/True/TRUE/1/yes/y (case-insensitive).
-    ZENO_ENABLED = os.getenv("ZENO_ENABLED", "").strip().lower() in (
-        "true", "1", "yes", "y", "on"
+    # Default ENABLED: assenza della var -> il bot parte.
+    # Per spegnerlo: ZENO_ENABLED=false|0|no|off (case-insensitive).
+    ZENO_ENABLED = os.getenv("ZENO_ENABLED", "").strip().lower() not in (
+        "false", "0", "no", "off"
     )
 
     # --- Sorgente dati ---
