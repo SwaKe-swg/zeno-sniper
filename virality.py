@@ -75,7 +75,11 @@ async def check_virality(mint: str, initial_mcap_sol: float, sol_price: float) -
     if buys > 0 and sells > 0:
         bs_ok = bs_ratio >= 1.5
 
-    if growth_ok and bs_ok:
+    # Trazione: sui mcap più alti pretendiamo del volume reale (30k+),
+    # altrimenti è un pump finto che alza il mcap senza mercato.
+    vol_ok = now["volume24"] >= 30000 if now["mcap"] >= 100000 else True
+
+    if growth_ok and bs_ok and vol_ok:
         return {"ok": True,
                 "detail": f"mcap {growth*100:+.0f}% (${base['mcap']:,.0f} -> ${now['mcap']:,.0f}), "
                           f"buy/sell {bs_ratio:.1f}, vol24 ${now['volume24']:,.0f}",
@@ -85,6 +89,8 @@ async def check_virality(mint: str, initial_mcap_sol: float, sol_price: float) -
         reason.append(f"mcap {growth*100:+.0f}% < {min_growth*100:.0f}%")
     if not bs_ok:
         reason.append(f"buy/sell {bs_ratio:.1f} < 1.5")
+    if not vol_ok:
+        reason.append(f"vol ${now['volume24']:,.0f} < $30k (mcap alto)")
     return {"ok": False,
             "detail": ", ".join(reason) + " — niente trazione",
             "mcap_now": now["mcap"], "mcap_base": base["mcap"], "growth": growth}
