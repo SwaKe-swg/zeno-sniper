@@ -35,7 +35,7 @@ RUG_SEM = asyncio.Semaphore(4)
 # Rate-limit anti-flood Telegram
 _send_lock = asyncio.Lock()
 _last_send = 0.0
-RATE_LIMIT_SEC = 1.2
+RATE_LIMIT_SEC = Config.RATE_LIMIT_SEC
 
 # Prezzo SOL in USD (cache ~30s, non a ogni token)
 SOL_SOL_USD = 121.0
@@ -107,6 +107,14 @@ async def _verify_and_alert(ev: dict):
                   f"{rug['reason']}: {rug['detail'][:70]}")
             return
 
+        # anti-spam (opt-in): se impostato, tieni solo i token con un buy
+        # iniziale degno (in SOL realmente spesi) -> meno call, più qualità.
+        sol_spent = ev.get("solAmount") or 0
+        if Config.MIN_INITIAL_BUY_SOL > 0 and sol_spent < Config.MIN_INITIAL_BUY_SOL:
+            print(f"[{datetime.now()}] 🚫 SCARTATO anti-spam {ev.get('symbol')} "
+                  f"(solo {sol_spent:.2f} SOL < {Config.MIN_INITIAL_BUY_SOL})")
+            return
+
         # segna come alertato PRIMA del send (anti-duplicati/anti-flood)
         alerted_mints.add(mint)
 
@@ -166,16 +174,15 @@ async def process_new_token(ev: dict):
 
 async def main():
     # KILL-SWITCH: se ZENO_ENABLED non è "true", il bot esce subito e
-    # NON si connette né manda alert. Usarlo per stoppare da Railway senza
-    # toccare la dashboard. (Railway riavvia il container ma il processo
-    # termina comunque -> nessun WS, nessun alert.)
-    if os.getenv("ZENO_ENABLED", "").strip().lower() != "true":
+    # NON si connette né manda alert.
+    if not Config.ZENO_ENABLED:
         print(f"[{datetime.now()}] 🛑 ZENO DISABILITATO (ZENO_ENABLED != true). Esco senza connettermi.")
         return
 
     print(f"[{datetime.now()}] 🚀 ZENO Sniper avviato — chat {Config.TELEGRAM_CHAT_ID}")
     print(f"[{datetime.now()}] Filtri: liq>${Config.MIN_LIQUIDITY_USD:.0f} "
-          f"mcap<${Config.MAX_MARKET_CAP_USD:.0f} + anti-rug on-chain")
+          f"mcap<${Config.MAX_MARKET_CAP_USD:.0f} + anti-rug on-chain" 
+          + (f" + initialBuy>={Config.MIN_INITIAL_BUY_SOL} SOL" if Config.MIN_INITIAL_BUY_SOL > 0 else ""))
 
     Config.BOT = Bot(token=Config.TELEGRAM_BOT_TOKEN)
 

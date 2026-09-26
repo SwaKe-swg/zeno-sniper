@@ -1,6 +1,21 @@
 # zeno-sniper/alerts/tg.py
-# Formatta e invia l'alert di nuovo token su Telegram.
+# Formatta e invia la call di un nuovo token su Telegram.
+# Stile: pulito, compatto, ottimizzato per telefono (mobile).
 from datetime import datetime
+
+
+def _link_pumpfun(mint: str) -> str:
+    return f"https://pump.fun/coin/{mint}"
+
+
+def _link_axiom(mint: str) -> str:
+    # Axiom non espone un deep-link documentato; best-effort: apre il token.
+    # Se non dovesse caricare, l'utente ha comunque il mint copiabile (sotto).
+    return f"https://axiom.trade/token/{mint}"
+
+
+def _link_dex(chart_url: str) -> str:
+    return chart_url  # già dexscreener.com/solana/{mint}
 
 
 async def send_pump_alert(
@@ -16,22 +31,29 @@ async def send_pump_alert(
     sol_traded: float,
     sol_price: float,
 ):
-    """Invia l'alert di un nuovo token SOLANO verificato anti-rug on-chain."""
-    axiom_pulse = "https://axiom.trade/pulse"
-    message = (
-        f"🚨 *ZENO — NUOVO TOKEN SOLANA (on-chain puliti)* 🚨\n\n"
-        f"*Nome:* {coin_name} (`{symbol}`)\n"
-        f"*Market Cap:* `${mcap_usd:,.0f}`\n"
-        f"*Liquidità:* `${liq_usd:,.0f}`\n"
-        f"*Initial Buy:* `{initial_buy_sol:,.2f}` SOL\n"
-        f"*SOL scambiati:* `{sol_traded:,.2f}` SOL\n\n"
-        f"🛡️ *Anti-rug PASS:* mint + freeze authority rinunciate (on-chain)\n\n"
-        f"📊 *Chart:* [Dexscreener]({chart_url})\n"
-        f"📡 *Axiom Pulse:* [lista nuovi token]({axiom_pulse})\n"
-        f"`{mint}`  ← incolla mint in Axiom per tradare\n\n"
-        f"🔥 *DYOR bro. Wild west.*\n"
+    """Invia la call di un nuovo token (stile bro, compatto per mobile)."""
+    header = f"🎯 *{symbol}* — {coin_name}"
+    stats = (
+        f"💵 Mcap: `${mcap_usd:,.0f}`\n"
+        f"💧 Liq: `${liq_usd:,.0f}`\n"
+        f"🛒 Buy: `{initial_buy_sol:,.2f} SOL`\n"
+        f"🔁 Scambiati: `{sol_traded:,.2f} SOL`\n"
     )
-    kwargs = dict(
+    links = (
+        f"⚡ [Pump.fun]({_link_pumpfun(mint)})\n"
+        f"⚡ [Dexscreener]({_link_dex(chart_url)})\n"
+        f"⚡ [Axiom]({_link_axiom(mint)})\n"
+        f"`{mint}`\n"
+    )
+    footer = "_Wild west bro. DYOR prima di qualsiasi centesimo._"
+    message = (
+        f"{header}\n\n"
+        f"{stats}\n"
+        f"🛡️ *Anti-rug pass:* mint + freeze rinunciate\n\n"
+        f"{links}\n"
+        f"{footer}"
+    )
+    send_kwargs = dict(
         chat_id=chat_id,
         text=message,
         parse_mode="Markdown",
@@ -39,14 +61,13 @@ async def send_pump_alert(
         read_timeout=30,
         connect_timeout=20,
     )
-    try:
-        await bot.send_message(**kwargs)
-        print(f"[{datetime.now()}] Alert inviato per {symbol} → {chat_id}")
-        return
-    except Exception as e:
-        print(f"[{datetime.now()}] Errore invio alert {symbol}: {e} (retry...)")
-    try:
-        await bot.send_message(**kwargs)
-        print(f"[{datetime.now()}] Retry riuscito per {symbol} → {chat_id}")
-    except Exception as e2:
-        print(f"[{datetime.now()}] Retry fallito per {symbol}: {e2}")
+    # Invio con 1 retry
+    for attempt in (0, 1):
+        try:
+            await bot.send_message(**send_kwargs)
+            print(f"[{datetime.now()}] Call inviata {symbol} → {chat_id}")
+            return
+        except Exception as e:
+            if attempt == 0:
+                print(f"[{datetime.now()}] Errore invio {symbol}: {e} (retry...)")
+    print(f"[{datetime.now()}] Retry fallito anche per {symbol}")
