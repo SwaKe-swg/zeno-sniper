@@ -43,5 +43,10 @@ class Config:
     # --- Rate-limit invio ---
     RATE_LIMIT_SEC = float(os.getenv("RATE_LIMIT_SEC", "1.6"))
 
+    # --- Follow-up colore (verde/rosso) ---
+    # Dopo STATUS_WINDOW_S secondi dall'alert arancione, Zeno ricontrolla il
+    # mcap e aggiorna il messaggio: verde se sale, rosso se scende (rug).
+    STATUS_WINDOW_S = int(os.getenv("STATUS_WINDOW_S", "90"))
+
     # --- Riferimenti runtime (settati in main) ---
     BOT = None

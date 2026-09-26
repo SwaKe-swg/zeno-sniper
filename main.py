@@ -14,9 +14,12 @@ from telegram import Bot
 
 from config import Config
 from dex.ws_client import PumpPortalWSClient
-from alerts.tg import send_pump_alert
+from alerts.tg import send_alert, update_status
 from rug import check_rug
 from virality import check_virality
+
+# mcap base rilevato al momento dell'alert (per confrontare su/giu dopo)
+token_state = {}   # mint -> {"ev": dict, "message_id": int, "base_mcap": float}
 
 # Session HTTP condivisa con pool adeguato (evita "pool occupied" sotto carico)
 HTTP = requests.Session()
@@ -96,6 +99,39 @@ async def _health_server():
         httpd.shutdown()
 
 
+async def _check_and_update_status(mint: str):
+    """Dopo la finestra di osservazione, verifica se il mcap è salito o sceso
+    e aggiorna il colore del messaggio (🟢 salito / 🔴 sceso)."""
+    try:
+        import asyncio
+        from virality import _get_token_metrics
+        st = token_state.get(mint)
+        if not st:
+            return
+        # attesa osservazione (90s da quando è stato alertato)
+        await asyncio.sleep(getattr(Config, "STATUS_WINDOW_S", 90))
+
+        now = _get_token_metrics(mint)
+        if now is None or now["mcap"] <= 0:
+            return  # non leggibile, lascia arancione
+        base = st.get("base_mcap") or 0
+        if base <= 0:
+            base = now["mcap"]
+        state = "up" if now["mcap"] >= base else "rug"
+        ev = st["ev"]
+        sol_price = get_sol_usd()
+        await update_status(
+            Config.BOT, Config.TELEGRAM_CHAT_ID, st["message_id"],
+            ev.get("symbol") or "?", ev.get("name") or "?",
+            mint, get_token_chart_url(mint),
+            now["mcap"], (ev.get("vSolInBondingCurve") or 0) * sol_price,
+            ev.get("initialBuy") or 0, ev.get("solAmount") or 0, state,
+        )
+        token_state.pop(mint, None)
+    except Exception as e:
+        print(f"[{datetime.now()}] errore update status {mint}: {e}\n{traceback.format_exc()}")
+
+
 async def _verify_and_alert(ev: dict):
     """Verifica anti-rug on-chain (in background, ~11s max) e, se pulito, alerta."""
     mint = ev.get("mint")
@@ -143,20 +179,29 @@ async def _verify_and_alert(ev: dict):
             if wait > 0:
                 await asyncio.sleep(wait)
             _last_send = asyncio.get_event_loop().time()
-            await send_pump_alert(
+            msg_id = await send_alert(
                 Config.BOT,
                 Config.TELEGRAM_CHAT_ID,
-                ev.get("name") or "N/A",
                 ev.get("symbol") or "N/A",
+                ev.get("name") or "N/A",
                 mint,
                 get_token_chart_url(mint),
                 mcap_sol * sol_price,                     # mcap usd
                 (ev.get("vSolInBondingCurve") or 0) * sol_price,  # liq usd
                 ev.get("initialBuy") or 0,                # initial buy SOL
                 ev.get("solAmount") or 0,                 # SOL traded
-                sol_price,
-                virality_note=virality_note,
+                virality_note,
             )
+
+        if msg_id:
+            # traccia per il follow-up colorato (verde/rosso)
+            token_state[mint] = {
+                "ev": ev,
+                "message_id": msg_id,
+                "base_mcap": mcap_sol * sol_price,
+            }
+            asyncio.create_task(_check_and_update_status(mint))
+
         print(f"[{datetime.now()}] ✅ ALERT ZENO → {ev.get('symbol')} ${mcap_sol:.1f} SOL mcap" 
               + (f" [{growth*100:+.0f}%]" if growth is not None else ""))
     except Exception as e:
