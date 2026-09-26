@@ -86,7 +86,8 @@ async def check_virality(mint: str, initial_mcap_sol: float, sol_price: float) -
     growth_ok = growth >= min_growth
     bs_ok = True  # buy ratio è un bonus, non vincolante (manca spesso su fresh)
     if buys > 0 and sells > 0:
-        bs_ok = bs_ratio >= 1.5
+        min_bs = getattr(Config, "VIRALITY_BUY_SELL_RATIO", 1.2)
+        bs_ok = bs_ratio >= min_bs
 
     # Trazione: sui mcap più alti pretendiamo del volume reale (30k+),
     # altrimenti è un pump finto che alza il mcap senza mercato.

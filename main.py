@@ -141,7 +141,7 @@ async def _verify_and_alert(ev: dict):
             rug = check_rug(mint)
         if not rug["ok"]:
             print(f"[{datetime.now()}] 🚫 SCARTATO anti-rug {ev.get('symbol')} -> "
-                  f"{rug['reason']}: {rug['detail'][:70]}")
+                  f"{rug['reason']} | {rug['detail'][:60]}")
             return
 
         # anti-spam (opt-in): scarta i buy troppo deboli

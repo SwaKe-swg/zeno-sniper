@@ -8,8 +8,7 @@ class Config:
     TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
     # --- Kill-switch (Railway) ---
-    # Default ENABLED: assenza della var -> il bot parte.
-    # Per spegnerlo: ZENO_ENABLED=false|0|no|off (case-insensitive).
+    # Se false/off, il bot esce subito e NON connettersi. Default ENABLED.
     ZENO_ENABLED = os.getenv("ZENO_ENABLED", "").strip().lower() not in (
         "false", "0", "no", "off"
     )
@@ -37,7 +36,10 @@ class Config:
         "false", "0", "no", "off"
     )  # default TRUE
     VIRALITY_WINDOW_S = int(os.getenv("VIRALITY_WINDOW_S", "25"))
-    VIRALITY_MIN_GROWTH = float(os.getenv("VIRALITY_MIN_GROWTH", "0.30"))
+    VIRALITY_MIN_GROWTH = float(os.getenv("VIRALITY_MIN_GROWTH", "0.15"))
+    # buy/sell ratio soglia (default 1.2 = leggero vantaggio compratori)
+    # se >0, il virality check richiede anche questo.
+    VIRALITY_BUY_SELL_RATIO = float(os.getenv("VIRALITY_BUY_SELL_RATIO", "1.2"))
 
     # --- Rate-limit invio ---
     RATE_LIMIT_SEC = float(os.getenv("RATE_LIMIT_SEC", "1.6"))
