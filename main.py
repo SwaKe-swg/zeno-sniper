@@ -4,6 +4,7 @@
 # Prezzo SOL via Dexscreener REST per convertire i valori on-chain in USD.
 # Anti-rug: verifica on-chain mint/freeze authority (fail-closed) in background.
 import asyncio
+import os
 import time
 import traceback
 from datetime import datetime
@@ -62,6 +63,36 @@ def get_sol_usd() -> float:
 
 def get_token_chart_url(mint: str) -> str:
     return f"https://dexscreener.com/solana/{mint}"
+
+
+async def _health_server():
+    """Mini HTTP server per gli healthcheck di Railway (porta PORT o 8080).
+    Il bot non ha un web server, ma Railway con healthcheckPath '/' lo richiede."""
+    import http.server
+    import socketserver
+    import threading
+
+    port = int(os.getenv("PORT", "8080"))
+
+    class H(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):  # noqa: N802
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"OK")
+
+        def log_message(self, *a):
+            pass
+
+    httpd = socketserver.ThreadingTCPServer(("0.0.0.0", port), H)
+    print(f"[{datetime.now()}] Health server su :{port}")
+    # esegue in un thread per non bloccare l'event loop
+    t = threading.Thread(target=httpd.serve_forever, daemon=True)
+    t.start()
+    try:
+        while True:
+            await asyncio.sleep(3600)
+    except asyncio.CancelledError:
+        httpd.shutdown()
 
 
 async def _verify_and_alert(ev: dict):
@@ -139,6 +170,9 @@ async def main():
           f"mcap<${Config.MAX_MARKET_CAP_USD:.0f} + anti-rug on-chain")
 
     Config.BOT = Bot(token=Config.TELEGRAM_BOT_TOKEN)
+
+    # health server per Railway
+    asyncio.create_task(_health_server())
 
     ws = PumpPortalWSClient(Config.PUMPPORTAL_WS_URL, on_token=process_new_token)
     await ws.run()
