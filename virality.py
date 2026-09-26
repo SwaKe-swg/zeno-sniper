@@ -28,9 +28,22 @@ def _get_token_metrics(mint: str) -> dict | None:
             "volume24": float(p.get("volume", {}).get("h24", 0) or 0),
             "txns": (p.get("txns", {}) or {}).get("h24", {}),
             "liquidity": float((p.get("liquidity") or {}).get("usd", 0) or 0),
+            "pair_age_s": _pair_age(p),
         }
     except Exception:
         return None
+
+
+def _pair_age(p) -> float:
+    """Età del pair in secondi (dal timestamp di creazione)."""
+    try:
+        created = p.get("pairCreatedAt") or 0
+        if created <= 0:
+            return -1
+        import time as _t
+        return max(0, (_t.time() * 1000 - created) / 1000)
+    except Exception:
+        return -1
 
 
 async def check_virality(mint: str, initial_mcap_sol: float, sol_price: float) -> dict:
@@ -83,7 +96,8 @@ async def check_virality(mint: str, initial_mcap_sol: float, sol_price: float) -
         return {"ok": True,
                 "detail": f"mcap {growth*100:+.0f}% (${base['mcap']:,.0f} -> ${now['mcap']:,.0f}), "
                           f"buy/sell {bs_ratio:.1f}, vol24 ${now['volume24']:,.0f}",
-                "mcap_now": now["mcap"], "mcap_base": base["mcap"], "growth": growth}
+                "mcap_now": now["mcap"], "mcap_base": base["mcap"], "growth": growth,
+                "bs_ratio": bs_ratio, "age_min": _age_min(now)}
     reason = []
     if not growth_ok:
         reason.append(f"mcap {growth*100:+.0f}% < {min_growth*100:.0f}%")
@@ -93,4 +107,11 @@ async def check_virality(mint: str, initial_mcap_sol: float, sol_price: float) -
         reason.append(f"vol ${now['volume24']:,.0f} < $30k (mcap alto)")
     return {"ok": False,
             "detail": ", ".join(reason) + " — niente trazione",
-            "mcap_now": now["mcap"], "mcap_base": base["mcap"], "growth": growth}
+            "mcap_now": now["mcap"], "mcap_base": base["mcap"], "growth": growth,
+            "bs_ratio": bs_ratio, "age_min": _age_min(now)}
+
+
+def _age_min(metrics: dict) -> float:
+    """Età in minuti dal pair_age_s (0 se ignoto)."""
+    s = (metrics or {}).get("pair_age_s") or 0
+    return s / 60.0 if s and s > 0 else 0

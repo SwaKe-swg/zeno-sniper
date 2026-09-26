@@ -133,10 +133,10 @@ async def _check_and_update_status(mint: str):
 
 
 async def _verify_and_alert(ev: dict):
-    """Verifica anti-rug on-chain (in background, ~11s max) e, se pulito, alerta."""
+    """Verifica anti-rug on-chain (in background) e, se pulito + virale, alerta."""
     mint = ev.get("mint")
     try:
-        # check rug on-chain sotto semaforo (max 4 paralleli, niente pool saturato)
+        # check rug on-chain sotto semaforo (max 4 paralleli)
         async with RUG_SEM:
             rug = check_rug(mint)
         if not rug["ok"]:
@@ -144,8 +144,7 @@ async def _verify_and_alert(ev: dict):
                   f"{rug['reason']}: {rug['detail'][:70]}")
             return
 
-        # anti-spam (opt-in): se impostato, tieni solo i token con un buy
-        # iniziale degno (in SOL realmente spesi) -> meno call, più qualità.
+        # anti-spam (opt-in): scarta i buy troppo deboli
         sol_spent = ev.get("solAmount") or 0
         if Config.MIN_INITIAL_BUY_SOL > 0 and sol_spent < Config.MIN_INITIAL_BUY_SOL:
             print(f"[{datetime.now()}] 🚫 SCARTATO anti-spam {ev.get('symbol')} "
@@ -155,13 +154,16 @@ async def _verify_and_alert(ev: dict):
         sol_price = get_sol_usd()
         mcap_sol = ev.get("marketCapSol") or 0
 
-        # Piano A — virality check: verifica che il token abbia trazione
-        # reale (mcap in crescita) prima di alertare. Scarta i pump finti.
+        # Piano A — virality check: trazione reale prima di alertare.
         virality_note = ""
         growth = None
+        age_min = 0
+        bs_ratio = None
         if Config.VIRALITY_ENABLED:
             v = await check_virality(mint, mcap_sol, sol_price)
             growth = v.get("growth")
+            age_min = v.get("age_min", 0) or 0
+            bs_ratio = v.get("bs_ratio")
             if not v["ok"]:
                 print(f"[{datetime.now()}] 🚫 SCARTATO non-virale {ev.get('symbol')} "
                       f"-> {v['detail'][:80]}")
@@ -191,6 +193,8 @@ async def _verify_and_alert(ev: dict):
                 ev.get("initialBuy") or 0,                # initial buy SOL
                 ev.get("solAmount") or 0,                 # SOL traded
                 virality_note,
+                age_min=age_min,
+                bs_ratio=bs_ratio,
             )
 
         if msg_id:
@@ -202,8 +206,8 @@ async def _verify_and_alert(ev: dict):
             }
             asyncio.create_task(_check_and_update_status(mint))
 
-        print(f"[{datetime.now()}] ✅ ALERT ZENO → {ev.get('symbol')} ${mcap_sol:.1f} SOL mcap" 
-              + (f" [{growth*100:+.0f}%]" if growth is not None else ""))
+        print(f"[{datetime.now()}] ✅ ALERT ZENO → {ev.get('symbol')} ${mcap_sol:.1f} SOL mcap "
+              + (f"[{growth*100:+.0f}%]" if growth is not None else ""))
     except Exception as e:
         print(f"[{datetime.now()}] errore in verifica/alert {ev.get('symbol')}: {e}\n"
               f"{traceback.format_exc()}")
