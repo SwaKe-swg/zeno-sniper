@@ -8,8 +8,10 @@ class Config:
     TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 
     # --- Kill-switch (Railway) ---
-    # Se non è "true", il bot esce senza connettersi (nessun alert).
-    ZENO_ENABLED = os.getenv("ZENO_ENABLED", "").strip().lower() == "true"
+    # Si attiva con true/True/TRUE/1/yes/y (case-insensitive).
+    ZENO_ENABLED = os.getenv("ZENO_ENABLED", "").strip().lower() in (
+        "true", "1", "yes", "y", "on"
+    )
 
     # --- Sorgente dati ---
     PUMPPORTAL_WS_URL = os.getenv(
