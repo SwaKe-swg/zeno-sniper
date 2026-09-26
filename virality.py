@@ -56,12 +56,28 @@ async def check_virality(mint: str, initial_mcap_sol: float, sol_price: float) -
 
     growth = (now["mcap"] - base["mcap"]) / base["mcap"] if base["mcap"] else 0
 
-    if growth >= min_growth:
+    # Trazione reale: oltre alla crescita mcap, se Dexscreener fornisce i txns
+    # h24 valutiamo il buy/sell ratio (>= 1.5 = compratori in vantaggio).
+    txns = now.get("txns") or {}
+    buys = int(txns.get("buys") or 0)
+    sells = int(txns.get("sells") or 0)
+    bs_ratio = (buys / sells) if sells > 0 else (buys if buys > 0 else 0)
+
+    growth_ok = growth >= min_growth
+    bs_ok = True  # buy ratio è un bonus, non vincolante (manca spesso su fresh)
+    if buys > 0 and sells > 0:
+        bs_ok = bs_ratio >= 1.5
+
+    if growth_ok and bs_ok:
         return {"ok": True,
                 "detail": f"mcap {growth*100:+.0f}% (${base['mcap']:,.0f} -> ${now['mcap']:,.0f}), "
-                          f"vol24 ${now['volume24']:,.0f}",
+                          f"buy/sell {bs_ratio:.1f}, vol24 ${now['volume24']:,.0f}",
                 "mcap_now": now["mcap"], "mcap_base": base["mcap"], "growth": growth}
+    reason = []
+    if not growth_ok:
+        reason.append(f"mcap {growth*100:+.0f}% < {min_growth*100:.0f}%")
+    if not bs_ok:
+        reason.append(f"buy/sell {bs_ratio:.1f} < 1.5")
     return {"ok": False,
-            "detail": f"mcap {growth*100:+.0f}% (${base['mcap']:,.0f}), sotto la soglia "
-                      f"{min_growth*100:.0f}% — niente trazione",
+            "detail": ", ".join(reason) + " — niente trazione",
             "mcap_now": now["mcap"], "mcap_base": base["mcap"], "growth": growth}

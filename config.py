@@ -23,7 +23,7 @@ class Config:
     # I nuovi token Pump.fun partono con ~$3.5-4k di liquidità: la soglia
     # $2500 lascia passare i fresh launch senza scartare i pitest.
     MIN_LIQUIDITY_USD = float(os.getenv("MIN_LIQUIDITY_USD", "2500"))
-    MAX_MARKET_CAP_USD = float(os.getenv("MAX_MARKET_CAP_USD", "50000"))
+    MAX_MARKET_CAP_USD = float(os.getenv("MAX_MARKET_CAP_USD", "75000"))
     MIN_HOLDERS = int(os.getenv("MIN_HOLDERS", "10"))
 
     # --- Filtro anti-spam (basso = più call, alto = più selettivo) ---
