@@ -242,6 +242,19 @@ async def process_new_token(ev: dict):
     asyncio.create_task(_verify_and_alert(ev))
 
 
+# scanner Freecash parallelo (opzionale, testo/web leggero)
+async def _freecash_loop():
+    from freecash_scanner import scan_freecash
+    while True:
+        try:
+            results = scan_freecash()
+            for r in results:
+                print(f"[{datetime.now()}] 💰 FREECASH TROVATO: {r['nome']} — €{r['premio_eur']} — {r.get('url', r.get('fonte'))}")
+        except Exception as e:
+            print(f"[{datetime.now()}] ⚠️ errore freecash scan: {e}")
+        await asyncio.sleep(30)
+
+
 async def main():
     # KILL-SWITCH: se ZENO_ENABLED non è "true", il bot esce subito e
     # NON si connette né manda alert.
@@ -258,6 +271,11 @@ async def main():
 
     # health server per Railway
     asyncio.create_task(_health_server())
+
+    # scanner Freecash parallelo (opzionale, testo/web leggero, nessun video pesante)
+    if Config.FREECASH_ENABLED:
+        from freecash_scanner import scan_freecash
+        asyncio.create_task(_freecash_loop())
 
     ws = PumpPortalWSClient(Config.PUMPPORTAL_WS_URL, on_token=process_new_token)
     await ws.run()

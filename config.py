@@ -44,7 +44,11 @@ class Config:
     # --- Rate-limit invio ---
     RATE_LIMIT_SEC = float(os.getenv("RATE_LIMIT_SEC", "1.6"))
 
-    # --- Follow-up colore (verde/rosso) ---
+    # --- Bot scanner Freecash (opzionale, testo/web leggero) ---
+    FREECASH_ENABLED = os.getenv("FREECASH_ENABLED", "").strip().lower() not in (
+        "false", "0", "no", "off"
+    )  # default FALSE
+    FREECASH_MIN_PREMIO = float(os.getenv("FREECASH_MIN_PREMIO", "50"))
     STATUS_WINDOW_S = int(os.getenv("STATUS_WINDOW_S", "60"))
 
     # --- Riferimenti runtime (settati in main) ---
