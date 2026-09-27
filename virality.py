@@ -1,5 +1,11 @@
 # zeno-sniper/virality.py
 # Piano A — "virality check" on-chain.
+# Soglie numeriche basate su ricerca virality (moonhydra/flashift/bydfi) e
+# pre-buy checklist dal video jakegetrich (social gates, holder sanity,
+# bubble map, deep proof, narrative, conviction). Parametri Trojan-style
+# riferimento: amount 0.1 SOL, slippage 30%, fee 0.02 SOL, tip 0.08 SOL,
+# virality mcap+15% in 25s, buy/sell >=2.0 (default 1.2 per flex),
+# anti-rug mint/freeze revoked.
 import asyncio
 from datetime import datetime
 
