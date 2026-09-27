@@ -46,13 +46,14 @@ def _pair_age(p) -> float:
         return -1
 
 
-async def check_virality(mint: str, initial_mcap_sol: float, sol_price: float) -> dict:
+async def check_virality(mint: str, initial_mcap_sol: float, sol_price: float,
+                          min_growth: float = None) -> dict:
     """Verifica trazione reale dopo la finestra. ok=True se il mcap cresce.
 
     Legge finestra e soglia da Config (VIRALITY_WINDOW_S / VIRALITY_MIN_GROWTH).
     """
     window = getattr(Config, "VIRALITY_WINDOW_S", 45)
-    min_growth = getattr(Config, "VIRALITY_MIN_GROWTH", 0.30)
+    min_growth = min_growth if min_growth is not None else getattr(Config, "VIRALITY_MIN_GROWTH", 0.30)
     initial_mcap_usd = initial_mcap_sol * sol_price
 
     await asyncio.sleep(MIN_BACKOFF_S)
@@ -83,7 +84,11 @@ async def check_virality(mint: str, initial_mcap_sol: float, sol_price: float) -
     sells = int(txns.get("sells") or 0)
     bs_ratio = (buys / sells) if sells > 0 else (buys if buys > 0 else 0)
 
-    growth_ok = growth >= min_growth
+    # Se fornito, la soglia di crescita viene sovrascritta
+    # (per il caso virale da profilo social emergente: soglia ridotta).
+    actual_min_growth = min_growth
+
+    growth_ok = growth >= actual_min_growth
     bs_ok = True  # buy ratio è un bonus, non vincolante (manca spesso su fresh)
     if buys > 0 and sells > 0:
         min_bs = getattr(Config, "VIRALITY_BUY_SELL_RATIO", 1.2)

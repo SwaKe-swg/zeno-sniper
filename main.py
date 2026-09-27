@@ -17,6 +17,11 @@ from dex.ws_client import PumpPortalWSClient
 from alerts.tg import send_alert, update_status
 from rug import check_rug
 from virality import check_virality
+from scanner_multi import scan_profiles_and_find_coin
+
+# Set globale di ticker/profili emergenti sui social (web search parallelo)
+# Aggiornato dal task scanner_multi.
+social_hot_tickers = set()
 
 # mcap base rilevato al momento dell'alert (per confrontare su/giu dopo)
 token_state = {}   # mint -> {"ev": dict, "message_id": int, "base_mcap": float}
