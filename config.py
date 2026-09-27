@@ -26,7 +26,7 @@ class Config:
     # virali tipo HEISENBERG (esplose da $5k a $324k in 1h). Teniamo $300k;
     # il virality check resta il gate vero (mcap in crescita + vol/txns reali).
     MAX_MARKET_CAP_USD = float(os.getenv("MAX_MARKET_CAP_USD", "300000"))
-    MIN_HOLDERS = int(os.getenv("MIN_HOLDERS", "10"))
+    MIN_HOLDERS = int(os.getenv("MIN_HOLDERS", "50"))
 
     # --- Filtro anti-spam (basso = più call, alto = più selettivo) ---
     MIN_INITIAL_BUY_SOL = float(os.getenv("MIN_INITIAL_BUY_SOL", "0"))
@@ -39,7 +39,7 @@ class Config:
     VIRALITY_MIN_GROWTH = float(os.getenv("VIRALITY_MIN_GROWTH", "0.15"))
     # buy/sell ratio soglia (default 1.2 = leggero vantaggio compratori)
     # se >0, il virality check richiede anche questo.
-    VIRALITY_BUY_SELL_RATIO = float(os.getenv("VIRALITY_BUY_SELL_RATIO", "1.2"))
+    VIRALITY_BUY_SELL_RATIO = float(os.getenv("VIRALITY_BUY_SELL_RATIO", "2.0"))
 
     # --- Rate-limit invio ---
     RATE_LIMIT_SEC = float(os.getenv("RATE_LIMIT_SEC", "1.6"))

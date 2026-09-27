@@ -89,16 +89,23 @@ async def check_virality(mint: str, initial_mcap_sol: float, sol_price: float,
     actual_min_growth = min_growth
 
     growth_ok = growth >= actual_min_growth
-    bs_ok = True  # buy ratio è un bonus, non vincolante (manca spesso su fresh)
+    bs_ok = True  # buy ratio è vincolante
     if buys > 0 and sells > 0:
-        min_bs = getattr(Config, "VIRALITY_BUY_SELL_RATIO", 1.2)
+        min_bs = getattr(Config, "VIRALITY_BUY_SELL_RATIO", 2.0)
         bs_ok = bs_ratio >= min_bs
 
     # Trazione: sui mcap più alti pretendiamo del volume reale (30k+),
     # altrimenti è un pump finto che alza il mcap senza mercato.
     vol_ok = now["volume24"] >= 30000 if now["mcap"] >= 100000 else True
 
-    if growth_ok and bs_ok and vol_ok:
+    # Holders sanity: se disponibile, controlla che ci siano almeno MIN_HOLDERS.
+    # Se il dato non c'è (fresh pump), non scarta per assenza — il filtro
+    # MIN_HOLDERS nel main scarta prima di arrivare qui.
+    holders_ok = True
+    if "holders" in now:
+        holders_ok = int(now.get("holders") or 0) >= getattr(Config, "MIN_HOLDERS", 10)
+
+    if growth_ok and bs_ok and vol_ok and holders_ok:
         return {"ok": True,
                 "detail": f"mcap {growth*100:+.0f}% (${base['mcap']:,.0f} -> ${now['mcap']:,.0f}), "
                           f"buy/sell {bs_ratio:.1f}, vol24 ${now['volume24']:,.0f}",
@@ -106,11 +113,13 @@ async def check_virality(mint: str, initial_mcap_sol: float, sol_price: float,
                 "bs_ratio": bs_ratio, "age_min": _age_min(now)}
     reason = []
     if not growth_ok:
-        reason.append(f"mcap {growth*100:+.0f}% < {min_growth*100:.0f}%")
+        reason.append(f"mcap {growth*100:+.0f}% < {actual_min_growth*100:.0f}%")
     if not bs_ok:
-        reason.append(f"buy/sell {bs_ratio:.1f} < 1.5")
+        reason.append(f"buy/sell {bs_ratio:.1f} < {getattr(Config, 'VIRALITY_BUY_SELL_RATIO', 2.0)}")
     if not vol_ok:
         reason.append(f"vol ${now['volume24']:,.0f} < $30k (mcap alto)")
+    if not holders_ok:
+        reason.append(f"holders {now.get('holders', '?')} < {getattr(Config, 'MIN_HOLDERS', 10)}")
     return {"ok": False,
             "detail": ", ".join(reason) + " — niente trazione",
             "mcap_now": now["mcap"], "mcap_base": base["mcap"], "growth": growth,
