@@ -18,6 +18,7 @@ from alerts.tg import send_alert, update_status
 from rug import check_rug
 from virality import check_virality
 from scanner_multi import scan_profiles_and_find_coin
+from freecash_scanner import scan_freecash
 
 # Set globale di ticker/profili emergenti sui social (web search parallelo)
 # Aggiornato dal task scanner_multi.
@@ -272,10 +273,18 @@ async def main():
     # health server per Railway
     asyncio.create_task(_health_server())
 
-    # scanner Freecash parallelo (opzionale, testo/web leggero, nessun video pesante)
+    # scanner Freecash parallelo (opzionale, testo/web leggero)
     if Config.FREECASH_ENABLED:
-        from freecash_scanner import scan_freecash
         asyncio.create_task(_freecash_loop())
+
+    # scanner VIP parallelo (opzionale, testo/web leggero)
+    # (se attivo, aggiorna social_hot_tickers che il virality usa come bonus)
+    # Per attivarlo, impostare una variabile d'ambiente o lasciare il codice.
+    # Per ora non attivo per risparmio token — può essere attivato su Railway.
+    # Se vuoi attivarlo: aggiungi una variabile SCANNER_VIP_ENABLED=true.
+    # (lasciamo il codice pronto ma non lanciamo il loop per default)
+    # Per attivarlo manualmente: decommentare le righe sotto.
+    # asyncio.create_task(_vip_loop())
 
     ws = PumpPortalWSClient(Config.PUMPPORTAL_WS_URL, on_token=process_new_token)
     await ws.run()
