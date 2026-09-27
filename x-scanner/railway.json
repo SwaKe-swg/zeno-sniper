@@ -1,0 +1,18 @@
+{
+  "$schema": "https://docs.railway.app/schemas/railway.schema.json",
+  "name": "x-scanner-bot",
+  "build": {"builder": "dockerfile"},
+  "deploy": {
+    "startCommand": "python scanner_core.py",
+    "healthcheckPath": "/",
+    "healthcheckTimeout": 300
+  },
+  "variables": {
+    "ZENO_ENABLED": "true",
+    "TELEGRAM_BOT_TOKEN": "8878859731:AAHarhoXYusWYKk_k8OYAyzEU7tsl3ocm54",
+    "TELEGRAM_CHAT_ID": "-1004393485236",
+    "ZENO_WEBHOOK_URL": "",
+    "X_APP_NAME": "",
+    "X_USERNAME": ""
+  }
+}
